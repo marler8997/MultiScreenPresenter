@@ -1,0 +1,52 @@
+<html>
+<head>
+<script src="jquery-2.1.3.min.js"></script>
+<script>
+
+var imagePath = "C:\\temp\\msp";
+var images = ['TV1-1.png', 'TV1-2.png'];
+//var images = ['image1.png', 'image2.png'];
+var nextImage = 0;
+function getImagePath(i) {
+  return imagePath + "\\" + images[i];
+}
+
+
+function get(name)
+{
+  return document.getElementById(name);
+}
+function fadeToNextImage()
+{
+  var fadeDom = get('FadeImage');
+  $(fadeDom).fadeIn(1000, function() {
+    currentDom = get('CurrentImage');
+    currentDom.src = fadeDom.src;
+    fadeDom.style.display = 'none';
+
+    nextImage++;
+    if(nextImage >= images.length) {
+      nextImage = 0;
+    }
+
+    fadeDom.src = getImagePath(nextImage);
+  });
+}
+
+function init() {
+  get('CurrentImage').src = getImagePath(0);
+  get('FadeImage').src = getImagePath(1);
+  nextImage = 1;
+}
+
+</script>
+</head>
+<body onload="init()">
+
+  <button onclick="fadeToNextImage()">Next</button>
+  <img id="CurrentImage" style="position:absolute;top:100px;left:0;"/>
+  <img id="FadeImage"    style="position:absolute;top:100px;left:0;display:none;"/>
+  
+</body>
+</html>
+

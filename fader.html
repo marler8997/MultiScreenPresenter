@@ -1,0 +1,66 @@
+<html>
+<head>
+<script>
+
+var imagePath = "C:\\temp\\msp";
+var images = ['TV1-1.png', 'TV1-2.png'];
+//var images = ['image1.png', 'image2.png'];
+var nextImage = 0;
+function getImagePath(i) {
+  return imagePath + "\\" + images[i];
+}
+
+function fadeIn(el, transitionMsecs, callback) {
+  var startTime = performance.now();
+  var fade = function(timestamp) {
+    diffMsecs = timestamp - startTime;
+    if(diffMsecs < transitionMsecs) {
+      el.style.opacity = diffMsecs / transitionMsecs;
+      //setTimeout(requestAnimationFrame, 50, fade);
+      requestAnimationFrame(fade);
+      return;
+    }
+
+    el.style.opacity = 1;
+    if(callback) callback();
+  }
+  requestAnimationFrame(fade);
+}
+
+function get(name)
+{
+  return document.getElementById(name);
+}
+function fadeToNextImage()
+{
+  fadeDom = get('FadeImage');
+  fadeIn(fadeDom, 1000, function() {
+    currentDom = get('CurrentImage');
+    currentDom.src = fadeDom.src;
+    fadeDom.style.opacity = 0;
+
+    nextImage++;
+    if(nextImage >= images.length) {
+      nextImage = 0;
+    }
+
+    fadeDom.src = getImagePath(nextImage);
+  });
+}
+
+function init() {
+  get('CurrentImage').src = getImagePath(0);
+  get('FadeImage').src = getImagePath(1);
+  nextImage = 1;
+}
+
+</script>
+</head>
+<body onload="init()">
+
+  <img id="CurrentImage" style="position:absolute;top:0;left:0;"/>
+  <img id="FadeImage"    style="position:absolute;top:0;left:0;opacity:0;" onclick="fadeToNextImage()"/>
+  
+</body>
+</html>
+
