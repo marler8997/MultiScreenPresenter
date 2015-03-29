@@ -7,6 +7,10 @@ import std.array;
 import std.string;
 import std.datetime;
 import core.thread;
+import std.file : read;
+import std.uni : toLower;
+import std.conv : to;
+import std.json;
 
 import glib.Timeout;
 
@@ -138,8 +142,8 @@ struct GtkBrowserWindow
 }
 
 __gshared MainWindow window;
-__gshared CairoFadeImage cairoFade;
-__gshared ImageSurface image1, image2;
+//__gshared CairoFadeImage cairoFade;
+//__gshared ImageSurface image1, image2;
 
 Image load(string filename)
 {
@@ -174,7 +178,14 @@ void main(string[] args)
   window = new MainWindow("GtkNet");
   window.setDefaultSize(300, 300);
   window.setPosition(GtkWindowPosition.POS_CENTER);
+
+  window.setDecorated(false);
   //window.fullscreen();
+
+
+  //auto cairoFadeImages = loadConfig("config.json");
+  //return;
+
   
   //
   // Setup Icon
@@ -203,11 +214,31 @@ void main(string[] args)
 
   //image1 = ImageSurface.createFromPng(`C:\temp\msp\image1.png`);
   //image2 = ImageSurface.createFromPng(`C:\temp\msp\image2.png`);
-  image1 = ImageSurface.createFromPng(`C:\temp\msp\TV1-1.png`);
-  image2 = ImageSurface.createFromPng(`C:\temp\msp\TV1-2.png`);
-  cairoFade = new CairoFadeImage(image1, 500);
+  //image1 = ImageSurface.createFromPng(`C:\temp\msp\TV1-1.png`);
+  //image2 = ImageSurface.createFromPng(`C:\temp\msp\TV1-2.png`);
+  //cairoFade = new CairoFadeImage(image1, 500);
   
-  window.add(cairoFade.drawingArea);
+  //window.add(cairoFade.drawingArea);
+
+  
+
+  var lambImage = ImageSurface.createFromPng(`C:\temp\msp\lamb.png`);
+  var kittiesImage = ImageSurface.createFromPng(`C:\temp\msp\kitties.png`);
+
+/+
+  extern(C) int startTransitionThread(void* data)
+{
+  TransitionThread transitionThread = new TransitionThread
+    ([
+      WaitAction( 4000, &delegates.switchToImage2),
+      WaitAction( 4000, &delegates.switchToImage1)
+      ]);
+  transitionThread.start();
+  return 0;
+}
++/  
+  
+  
 
   //new Timeout(25, &delegates.fortyPerSecond);
 
@@ -219,6 +250,11 @@ void main(string[] args)
   //auto defaultScreen = Screen.getDefault();
   //defaultScreen.printInfo("defaultScreen");
 }
+
+
+
+
+
 
 
 struct CiaroImageRoll
@@ -242,10 +278,13 @@ struct CiaroImageRoll
   }
 }
 
+
+
 interface CairoTransitionImage
 {
   void transitionTo(ImageSurface image);
 }
+
 
 class CairoFadeImage : CairoTransitionImage
 {
@@ -443,5 +482,78 @@ void printInfo(Screen screen, string identifier)
   //writefln("%s.() = %s", identifier, screen.());
   stdout.flush();
 }
+
+
+
+
+
+
+//
+// JSON Parse Logic
+//
+string namePrefix(JSON_TYPE type)
+{
+  if (type == JSON_TYPE.ARRAY || type == JSON_TYPE.OBJECT || type == JSON_TYPE.INTEGER) {
+    return "an";
+  } else {
+    return "a";
+  }
+}
+template namePrefix(string type)
+{
+  static if(type == "array" || type == "object" || type == "integer") {
+    enum namePrefix = "an";
+  } else static assert(0, "no namePrefix for type "~type);
+}
+auto as(string type)(JSONValue v, lazy string context)
+{
+  try {
+    mixin("return v."~type~";");
+  } catch(JSONException e) {
+    throw new JSONException(context~format(" expected %s %s but got %s %s", namePrefix!type, type,
+					   namePrefix(v.type), to!string(v.type).toLower));
+  }
+}
+auto getProp(string type)(JSONValue[string] object, string property, lazy string objectIdentifier)
+{
+  if(property !in object)
+    throw new JSONException(format("%s is missing property '%s'", objectIdentifier, property));
+  try {
+    mixin("return object[property]."~type~";");
+  } catch(Exception e) {
+    throw e;
+  }
+}
+CairoFadeImage[] loadConfig(string filename)
+{
+  auto jsonText = cast(char[])read(filename);
+  auto jsonRoot = parseJSON(jsonText);
+  
+  auto cairoFadeImages = appender!(CairoFadeImage[])();
+
+  foreach(i, imageConfigArray; jsonRoot.as!"array"("While parsing start of config file")) {
+
+    JSONValue[string] imageConfig = imageConfigArray.as!"object"(format("While parsing start of element at root index %s", i));
+
+    string objectId = format("Graphic config object at index %s", i);
+    auto type = imageConfig.getProp!"str"("Type", objectId);
+    if(type == "Slideshow") {
+
+      auto top = imageConfig.getProp!"integer"("Top", objectId);
+      auto left = imageConfig.getProp!"integer"("Left", objectId);
+
+      auto images = imageConfig.getProp!"array"("Images", objectId);
+      
+      
+    } else {
+      throw new JSONException(format("Unknown graphic Type '%s'", type));
+    }
+    
+  }
+
+  return null;
+}
+
+
 
 
